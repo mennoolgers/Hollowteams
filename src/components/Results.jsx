@@ -177,8 +177,7 @@ export default function Results({ teamName, answers, onRestart }) {
         <div className="results-footer">
           <p className="attribution">
             Based on the Hollow Team framework by{" "}
-            <strong>Menno Olgers</strong>, inspired by{" "}
-            <em>Reinventing Organizations</em> (Laloux) and the challenge of
+            <strong>Menno Olgers</strong>, inspired by the challenge of
             intentional human-AI collaboration.
           </p>
           <button className="btn-secondary" onClick={onRestart}>
