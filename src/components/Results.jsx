@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { dimensions, interpretations } from "../data/questions";
+import { dimensions, interpretations, dimensionAdvice } from "../data/questions";
 
 function calcScores(answers) {
   const dimScores = dimensions.map((dim) => {
@@ -13,7 +13,15 @@ function calcScores(answers) {
 }
 
 function getInterpretation(score) {
-  return interpretations.find((i) => score >= i.min && score <= i.max) || interpretations[interpretations.length - 1];
+  return (
+    interpretations.find((i) => score >= i.min && score <= i.max) ||
+    interpretations[interpretations.length - 1]
+  );
+}
+
+function getDimAdvice(dimId, score) {
+  const tiers = dimensionAdvice[dimId];
+  return tiers.find((t) => score <= t.maxScore) || tiers[tiers.length - 1];
 }
 
 function ScoreRing({ score, color, size = 160 }) {
@@ -21,39 +29,17 @@ function ScoreRing({ score, color, size = 160 }) {
   const circumference = 2 * Math.PI * radius;
   const filled = (score / 5) * circumference;
   const gap = circumference - filled;
-
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1e293b" strokeWidth="12" />
       <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="#1e293b"
-        strokeWidth="12"
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth="12"
-        strokeDasharray={`${filled} ${gap}`}
-        strokeLinecap="round"
+        cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="12"
+        strokeDasharray={`${filled} ${gap}`} strokeLinecap="round"
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: "stroke-dasharray 0.8s ease" }}
       />
-      <text
-        x="50%"
-        y="50%"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill={color}
-        fontSize={size * 0.22}
-        fontWeight="700"
-        fontFamily="inherit"
-      >
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fill={color}
+        fontSize={size * 0.22} fontWeight="700" fontFamily="inherit">
         {score.toFixed(1)}
       </text>
     </svg>
@@ -67,15 +53,99 @@ function DimBar({ dim, score, color }) {
       <div className="dim-bar-header">
         <span className="dim-bar-icon">{dim.icon}</span>
         <span className="dim-bar-title">{dim.title}</span>
-        <span className="dim-bar-score" style={{ color }}>
-          {score.toFixed(1)}
-        </span>
+        <span className="dim-bar-score" style={{ color }}>{score.toFixed(1)}</span>
       </div>
       <div className="dim-bar-track">
-        <div
-          className="dim-bar-fill"
-          style={{ width: `${pct}%`, background: color }}
+        <div className="dim-bar-fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
+    </div>
+  );
+}
+
+function DimAdviceCard({ dim, score, color }) {
+  const advice = getDimAdvice(dim.id, score);
+  return (
+    <div className="advice-card">
+      <div className="advice-card-header">
+        <span className="advice-icon" style={{ color }}>{dim.icon}</span>
+        <div>
+          <div className="advice-dim-title">{dim.title}</div>
+          <div className="advice-score" style={{ color }}>{score.toFixed(1)} / 5</div>
+        </div>
+      </div>
+      <p className="advice-headline">{advice.headline}</p>
+      <p className="advice-insight">{advice.insight}</p>
+      <ul className="advice-actions">
+        {advice.actions.map((a, i) => (
+          <li key={i}>{a}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function EmailSection({ teamName, overall, interp, dimScores }) {
+  const [email, setEmail] = useState("");
+
+  function buildEmailBody() {
+    const lines = [
+      `HOLLOW TEAM SCORE — ${teamName}`,
+      ``,
+      `Overall: ${overall.toFixed(1)} / 5 — ${interp.label}`,
+      `"${interp.tagline}"`,
+      ``,
+      interp.description,
+      ``,
+      `─────────────────────────`,
+      `DIMENSION BREAKDOWN`,
+      `─────────────────────────`,
+      ...dimScores.map((d) => `${d.icon} ${d.title}: ${d.score.toFixed(1)} / 5`),
+      ``,
+      `─────────────────────────`,
+      `WHAT THIS MEANS`,
+      `─────────────────────────`,
+      ...dimScores.flatMap((d) => {
+        const advice = getDimAdvice(d.id, d.score);
+        return [
+          ``,
+          `${d.icon} ${d.title} (${d.score.toFixed(1)})`,
+          advice.headline,
+          advice.insight,
+          `Actions:`,
+          ...advice.actions.map((a) => `• ${a}`),
+        ];
+      }),
+      ``,
+      `─────────────────────────`,
+      `Based on the Hollow Team framework by Menno Olgers`,
+      `https://www.linkedin.com/in/molgers/`,
+      `https://substack.com/@mennoolgers`,
+    ];
+    return encodeURIComponent(lines.join("\n"));
+  }
+
+  function handleSend() {
+    if (!email) return;
+    const subject = encodeURIComponent(`Your Hollow Team Score — ${teamName}`);
+    window.location.href = `mailto:${email}?subject=${subject}&body=${buildEmailBody()}`;
+  }
+
+  return (
+    <div className="email-section">
+      <p className="email-heading">Get your results in your inbox</p>
+      <p className="email-sub">Enter your email and we'll open your mail app with the full report pre-filled — just hit send.</p>
+      <div className="email-row">
+        <input
+          className="email-input"
+          type="email"
+          placeholder="your@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
         />
+        <button className="btn-primary email-btn" onClick={handleSend} disabled={!email}>
+          Send results
+        </button>
       </div>
     </div>
   );
@@ -86,7 +156,6 @@ function Gate({ onUnlock }) {
     window.open(url, "_blank", "noopener,noreferrer");
     onUnlock();
   }
-
   return (
     <div className="results">
       <div className="results-content gate-screen">
@@ -96,19 +165,13 @@ function Gate({ onUnlock }) {
           Follow or subscribe to unlock your full Hollow Team score and breakdown.
         </p>
         <div className="cta-buttons">
-          <button
-            className="cta-btn cta-btn-linkedin"
-            onClick={() => handleClick("https://www.linkedin.com/in/molgers/")}
-          >
+          <button className="cta-btn cta-btn-linkedin" onClick={() => handleClick("https://www.linkedin.com/in/molgers/")}>
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
               <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
             </svg>
             Follow on LinkedIn
           </button>
-          <button
-            className="cta-btn cta-btn-substack"
-            onClick={() => handleClick("https://substack.com/@mennoolgers")}
-          >
+          <button className="cta-btn cta-btn-substack" onClick={() => handleClick("https://substack.com/@mennoolgers")}>
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
               <path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/>
             </svg>
@@ -147,70 +210,66 @@ export default function Results({ teamName, answers, onRestart }) {
           <span className="team-label">{teamName}</span>
         </header>
 
+        {/* Overall score */}
         <div className="overall-section">
           <ScoreRing score={overall} color={interp.color} size={180} />
           <div className="overall-text">
-            <div
-              className="interp-label"
-              style={{ color: interp.color }}
-            >
-              {interp.label}
-            </div>
+            <div className="interp-label" style={{ color: interp.color }}>{interp.label}</div>
             <div className="interp-tagline">{interp.tagline}</div>
             <p className="interp-description">{interp.description}</p>
           </div>
         </div>
 
+        {/* Dimension bars */}
         <div className="dim-bars-section">
           <h3>Dimension Breakdown</h3>
           {dimScores.map((d) => (
-            <DimBar
-              key={d.id}
-              dim={d}
-              score={d.score}
-              color={barColor(d.score)}
-            />
+            <DimBar key={d.id} dim={d} score={d.score} color={barColor(d.score)} />
           ))}
         </div>
 
+        {/* Strongest / weakest */}
         <div className="insights-section">
           <div className="insight-card insight-strength">
             <div className="insight-label">Strongest dimension</div>
-            <div className="insight-dim">
-              {strongest.icon} {strongest.title}
-            </div>
+            <div className="insight-dim">{strongest.icon} {strongest.title}</div>
             <div className="insight-score">{strongest.score.toFixed(1)} / 5</div>
           </div>
           <div className="insight-card insight-weak">
             <div className="insight-label">Most at risk</div>
-            <div className="insight-dim">
-              {weakest.icon} {weakest.title}
-            </div>
+            <div className="insight-dim">{weakest.icon} {weakest.title}</div>
             <div className="insight-score">{weakest.score.toFixed(1)} / 5</div>
           </div>
         </div>
 
+        {/* Per-dimension deep dive */}
+        <div className="advice-section">
+          <h3 className="section-label">What this means for your team</h3>
+          {dimScores.map((d) => (
+            <DimAdviceCard key={d.id} dim={d} score={d.score} color={barColor(d.score)} />
+          ))}
+        </div>
+
+        {/* Reflection questions */}
         <div className="reflection-section">
           <h3>Questions to bring to your team</h3>
           <ul className="reflection-list">
-            <li>
-              Which decisions in our team <em>must</em> remain fundamentally
-              human, even when AI informs them?
-            </li>
-            <li>
-              Are we approving AI outputs faster than we understand them?
-            </li>
-            <li>
-              Where do we want intelligence to live — and what do people need to
-              exercise it responsibly?
-            </li>
-            <li>
-              Is AI making us sharper, or are our thinking muscles quietly
-              eroding?
-            </li>
+            <li>Which decisions in our team <em>must</em> remain fundamentally human, even when AI informs them?</li>
+            <li>Are we approving AI outputs faster than we understand them?</li>
+            <li>Where do we want intelligence to live — and what do people need to exercise it responsibly?</li>
+            <li>Is AI making us sharper, or are our thinking muscles quietly eroding?</li>
           </ul>
         </div>
 
+        {/* Email results */}
+        <EmailSection
+          teamName={teamName}
+          overall={overall}
+          interp={interp}
+          dimScores={dimScores}
+        />
+
+        {/* Scale legend */}
         <div className="scale-legend">
           <span>Scale: </span>
           <span className="legend-item" style={{ color: "#ef4444" }}>1 Critical</span>
@@ -225,9 +284,7 @@ export default function Results({ teamName, answers, onRestart }) {
             <strong>Menno Olgers</strong>, inspired by the challenge of
             intentional human-AI collaboration.
           </p>
-          <button className="btn-secondary" onClick={onRestart}>
-            ← Retake Assessment
-          </button>
+          <button className="btn-secondary" onClick={onRestart}>← Retake Assessment</button>
         </div>
       </div>
     </div>
