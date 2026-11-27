@@ -20,7 +20,6 @@ import cv2
 
 WIDTH, HEIGHT, FPS = 1280, 720, 30
 
-
 def make_frame(t: float, frame_no: int) -> np.ndarray:
     """Build one RGB frame of the test pattern for time t (seconds)."""
     # Soft diagonal colour gradient that slowly shifts over time.
@@ -43,7 +42,6 @@ def make_frame(t: float, frame_no: int) -> np.ndarray:
     cv2.putText(frame, f"frame {frame_no}   {time.strftime('%H:%M:%S')}", (60, HEIGHT - 60),
                 cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2, cv2.LINE_AA)
     return frame
-
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -79,7 +77,7 @@ def main() -> int:
         print("   extension in System Settings > General > Login Items & Extensions")
         print("   (on macOS 26: Privacy & Security > Media Extensions), then")
         print("   click 'Stop Virtual Camera' and quit OBS. Then run this test again.")
-        print(" - Windows: open OBS once, click 'Start Virtual Camera', then 'Stop', then quit OBS.")
+        print("
         return 1
 
     with cam:
@@ -108,7 +106,6 @@ def main() -> int:
             pass
     print("Stopped. If you saw the moving pattern in Zoom, Step 0 passed!")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())
