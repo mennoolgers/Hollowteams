@@ -101,7 +101,7 @@ class Engine:
         if raw is None:
             if src is not None and getattr(src, "error", None):
                 return self._card("Camera problem: see the control window")
-            return self._card("Waiting for camera..." if src else "Choose a camera")
+            return self._card("Waiting for camera..." if src else "No camera yet")
         frame = fit_cover(raw, self.width, self.height)
         # Effects are added here in the next step.
         return frame

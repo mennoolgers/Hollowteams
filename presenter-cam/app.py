@@ -3,14 +3,18 @@
 Shows a live preview, lets you choose your camera, and has one big
 Start / Stop button for sending the picture to OBS Virtual Camera.
 """
+import os
 import tkinter as tk
 from tkinter import ttk
 
 import cv2
 from PIL import Image, ImageTk
 
-import cameras
-from engine import Engine
+# The app asks macOS for camera permission itself (OpenCV cannot from a background thread).
+os.environ.setdefault("OPENCV_AVFOUNDATION_SKIP_AUTH", "1")
+
+import cameras  # noqa: E402
+from engine import Engine  # noqa: E402
 from settings import load_config, load_state, save_state
 
 PREVIEW_W, PREVIEW_H = 512, 288
@@ -71,6 +75,10 @@ class App:
 
         self.engine = Engine(self.config)
         self.camera_list = []
+        self.waiting_for_permission = False
+        self.permission = cameras.camera_permission()
+        if self.permission == "ask":
+            cameras.request_camera_permission()
         self.refresh_cameras(select=self.state.get("camera_name"))
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
         self.root.after(PREVIEW_EVERY_MS, self.tick)
@@ -92,10 +100,18 @@ class App:
         if pos < 0:
             return
         index, name = self.camera_list[pos]
-        self.engine.set_source(cameras.open_source(index, name, self.config["camera"],
-                                                   self.config["output"]))
         self.state["camera_name"] = name
         save_state(self.state)
+        if index != cameras.TEST_PATTERN:
+            self.permission = cameras.camera_permission()
+            if self.permission != "granted":
+                # Opening now would fail; tick() opens it as soon as you click Allow.
+                self.waiting_for_permission = True
+                self.engine.set_source(None)
+                return
+        self.waiting_for_permission = False
+        self.engine.set_source(cameras.open_source(index, name, self.config["camera"],
+                                                   self.config["output"]))
 
     # ---- output -----------------------------------------------------------
     def toggle_output(self):
@@ -103,6 +119,10 @@ class App:
 
     # ---- regular refresh --------------------------------------------------
     def tick(self):
+        if self.waiting_for_permission:
+            self.permission = cameras.camera_permission()
+            if self.permission == "granted":
+                self.choose_camera()
         frame = self.engine.preview
         if frame is not None:
             small = cv2.resize(frame, (PREVIEW_W, PREVIEW_H), interpolation=cv2.INTER_AREA)
@@ -118,6 +138,11 @@ class App:
             line = "Not sending. Press Start, then pick OBS Virtual Camera in Zoom."
         line += f"   {e.actual_fps:4.1f} fps, {e.frame_ms:4.1f} ms per frame"
         problems = [p for p in (e.output_error, getattr(e.source, "error", None)) if p]
+        if self.waiting_for_permission and self.permission == "ask":
+            problems.append("Waiting for camera permission: click Allow in the macOS question.")
+        elif self.waiting_for_permission:
+            problems.append("Camera access is off. System Settings > Privacy & Security > Camera: "
+                            "switch on Terminal, then close and restart this app.")
         if problems:
             line += "\n" + "\n".join(problems)
         self.status.configure(text=line)

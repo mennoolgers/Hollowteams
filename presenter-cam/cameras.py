@@ -29,6 +29,35 @@ def _mac_camera_names() -> list:
     return [str(d.localizedName()) for d in devices]
 
 
+_permission_handler = None  # kept alive until macOS answers
+
+
+def camera_permission() -> str:
+    """'granted', 'denied' or 'ask' (not decided yet). Always 'granted' off the Mac."""
+    if not IS_MAC:
+        return "granted"
+    try:
+        import AVFoundation
+    except ImportError:
+        return "granted"  # cannot check; let OpenCV try
+    status = AVFoundation.AVCaptureDevice.authorizationStatusForMediaType_(AVFoundation.AVMediaTypeVideo)
+    return {0: "ask", 3: "granted"}.get(int(status), "denied")
+
+
+def request_camera_permission() -> None:
+    """Show macOS's 'allow camera access' question. Must be called from the main thread."""
+    global _permission_handler
+    if not IS_MAC:
+        return
+    try:
+        import AVFoundation
+    except ImportError:
+        return
+    _permission_handler = lambda granted: None  # noqa: E731 - we poll the status instead
+    AVFoundation.AVCaptureDevice.requestAccessForMediaType_completionHandler_(
+        AVFoundation.AVMediaTypeVideo, _permission_handler)
+
+
 def list_cameras() -> list:
     """Return [(number, name), ...] for the camera picker, test pattern first."""
     found = [(TEST_PATTERN, "Test pattern (no camera)")]
