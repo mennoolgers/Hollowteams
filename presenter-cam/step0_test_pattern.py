@@ -73,11 +73,10 @@ def main() -> int:
         print(f"Reason: {exc}\n")
         print("Things to try:")
         print(" - Is OBS Studio 30 or newer installed?")
-        print(" - Mac: open OBS once, click 'Start Virtual Camera', allow the system")
+        print(" - Open OBS once, click 'Start Virtual Camera', allow the system")
         print("   extension in System Settings > General > Login Items & Extensions")
         print("   (on macOS 26: Privacy & Security > Media Extensions), then")
         print("   click 'Stop Virtual Camera' and quit OBS. Then run this test again.")
-        print("
         return 1
 
     with cam:
