@@ -5,6 +5,16 @@ out through **OBS Virtual Camera** into Zoom, Teams and Meet. I never open OBS i
 
 > Status: **Step 2**: six effects, a web address per effect, and Clear all. Stream Deck setup comes next.
 
+## Updating to a new version
+
+1. Save the new **presenter-cam ZIP** in your **Downloads** folder (do not unzip it).
+2. Double-click **`update_mac.command`** in your presenter-cam folder.
+
+It copies in the new version, **keeps your own files** (`config.yaml`, the `slides` folder, your
+`assets/logo.png`, remembered choices), removes macOS's "downloaded from the internet" flag so
+you are not asked to approve scripts again, and updates the helpers. New example settings land in
+`config.example.yaml`, so you can copy anything new into your own `config.yaml`.
+
 ## Step 0: test the camera route
 
 ### One-time preparation
