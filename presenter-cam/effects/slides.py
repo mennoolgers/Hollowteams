@@ -11,13 +11,14 @@ Web addresses (Stream Deck):
 """
 import re
 import threading
+import traceback
 from pathlib import Path
 
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-from fx import HERE, Effect, blend, blend_card, ease_out_cubic, to_array
+from fx import HERE, Effect, blend, blend_card, ease_out_cubic, font, soft_card, to_array, wrap_text
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 SWAP = 0.35   # seconds for the cross-fade between two slides
@@ -44,24 +45,38 @@ def list_decks(folder: Path) -> list:
     return decks
 
 
-def load_pages(path: Path, long_edge: int) -> list:
-    if path.is_file():
-        import pypdfium2 as pdfium
-        pdf = pdfium.PdfDocument(str(path))
-        pages = []
-        for i in range(len(pdf)):
-            page = pdf[i]
+class DeckSource:
+    """Reads one page at a time from a PDF or an image folder (so slide 1 shows quickly)."""
+
+    def __init__(self, path: Path, long_edge: int):
+        self.long_edge = long_edge
+        self.pdf, self.files = None, None
+        if path.is_file():
+            try:
+                import pypdfium2 as pdfium
+            except ImportError:
+                raise RuntimeError("the PDF reader is missing. Close the app, double-click "
+                                   "setup_mac.command once, then start the app again.") from None
+            self.pdf = pdfium.PdfDocument(str(path))
+            self.count = len(self.pdf)
+        else:
+            self.files = sorted((c for c in path.iterdir() if c.suffix.lower() in IMAGE_EXT), key=natural_key)
+            self.count = len(self.files)
+
+    def render(self, i: int) -> Image.Image:
+        if self.pdf is not None:
+            page = self.pdf[i]
             w, h = page.get_size()
-            pages.append(page.render(scale=long_edge / max(w, h)).to_pil().convert("RGB"))
+            img = page.render(scale=self.long_edge / max(w, h)).to_pil().convert("RGB")
             page.close()
-        pdf.close()
-        return pages
-    pages = []
-    for f in sorted((c for c in path.iterdir() if c.suffix.lower() in IMAGE_EXT), key=natural_key):
-        img = Image.open(f).convert("RGB")
-        img.thumbnail((long_edge, long_edge), Image.LANCZOS)
-        pages.append(img)
-    return pages
+            return img
+        img = Image.open(self.files[i]).convert("RGB")
+        img.thumbnail((self.long_edge, self.long_edge), Image.LANCZOS)
+        return img
+
+    def close(self):
+        if self.pdf is not None:
+            self.pdf.close()
 
 
 def as_bool(value) -> bool:
@@ -93,55 +108,77 @@ class Slides(Effect):
         self.decks = list_decks(self.folder)
         wanted = self.cfg.get("deck") or ""
         self.deck = next((d for d in self.decks if d.name == wanted), self.decks[0] if self.decks else None)
-        self.pages, self.sprites, self.index = [], {}, 0
-        self.shown = self.previous = None          # (sprite, margin, w, h)
+        self.count, self.sprites, self.index = 0, {}, 0
+        self.shown = self.previous = None          # (sprite, margin, w, h, solid)
         self.swap_t = -1e9
         self.loading = False
         self.message = ""
-        self._gen = 0
         self._lock = threading.Lock()
+        self._version = 0                          # goes up whenever the cards must be remade
+        self._wake = threading.Event()
+        self._source, self._source_deck, self._pages = None, None, {}
+        self._notes = {}
         self._shade_cache = {}
         self._full_shade = {}
         self._tint = np.empty((self.H, self.W, 3), np.uint8)
         self._tint[:] = self.colours["primary"]
-        self._reload(load_deck=True)
+        self.loading = self.deck is not None
+        threading.Thread(target=self._worker, daemon=True).start()
+        self._wake.set()
 
     # ---- background work: reading the deck and preparing the cards ---------
-    def _reload(self, load_deck=False):
+    def _remake(self):
+        """Throw away the prepared cards (new shape / frame / deck) and prepare again."""
         with self._lock:
-            self._gen += 1
-            gen = self._gen
+            self._version += 1
             self.sprites = {}
-        self.loading = True
-        threading.Thread(target=self._work, args=(gen, load_deck), daemon=True).start()
+        self._wake.set()
 
-    def _work(self, gen, load_deck):
-        try:
-            if load_deck:
-                self.pages, self.index = [], 0
-                if self.deck is None:
-                    self.message = f"No slides yet: put a PDF in the '{self.folder.name}' folder."
-                    return
-                self.message = f"Loading {self.deck.name}..."
-                pages = load_pages(self.deck, long_edge=int(self.W * 1.1))
-                if gen != self._gen:
-                    return
-                self.pages = pages
-                self.message = ""
-            # Current slide first, then its neighbours, so Next is instant.
-            order = sorted(range(len(self.pages)), key=lambda i: (abs(i - self.index), i < self.index))
-            for i in order:
-                if gen != self._gen:
-                    return
-                sprite = self._build(self.pages[i])
-                with self._lock:
-                    if gen == self._gen:
-                        self.sprites[i] = sprite
-        except Exception as exc:  # noqa: BLE001
-            self.message = f"Could not read the slides: {exc}"
-        finally:
-            if gen == self._gen:
+    def _worker(self):
+        while True:
+            self._wake.wait()
+            self._wake.clear()
+            try:
+                self._prepare()
+            except Exception as exc:  # noqa: BLE001
+                traceback.print_exc()
+                self.message = f"Could not read the slides: {exc}"
                 self.loading = False
+
+    def _prepare(self):
+        deck = self.deck
+        if deck is None:
+            self.message = f"No slides yet: put a PDF in the '{self.folder.name}' folder and restart."
+            return
+        self.loading = True
+        if deck != self._source_deck:
+            self.message = f"Opening {deck.name}..."
+            if self._source is not None:
+                self._source.close()
+            self._source, self._source_deck, self._pages = None, None, {}
+            source = DeckSource(deck, long_edge=int(self.W * 1.1))
+            self._source, self._source_deck, self.count = source, deck, source.count
+            if self.count == 0:
+                self.message = f"{deck.name} has no slides in it."
+                return
+            self.message = ""
+        while True:
+            if self._wake.is_set():                # something changed: start over
+                return
+            version = self._version
+            # Current slide first, then its neighbours, so Next is instant.
+            todo = [i for i in sorted(range(self.count), key=lambda i: (abs(i - self.index), i < self.index))
+                    if i not in self.sprites]
+            if not todo:
+                break
+            i = todo[0]
+            if i not in self._pages:
+                self._pages[i] = self._source.render(i)
+            sprite = self._build(self._pages[i])
+            with self._lock:
+                if version == self._version and deck == self.deck:
+                    self.sprites[i] = sprite
+        self.loading = False
 
     def _card_size(self, page):
         pw, ph = page.size
@@ -197,14 +234,14 @@ class Slides(Effect):
 
     # ---- controls -----------------------------------------------------------
     def _go(self, index, now):
-        if not self.pages:
+        if not self.count:
             return
-        index = max(0, min(len(self.pages) - 1, index))
+        index = max(0, min(self.count - 1, index))
         if index != self.index:
             self.index = index
             self.previous, self.swap_t = self.shown, now
             if index not in self.sprites:      # make sure this one is prepared next
-                self._reload()
+                self._wake.set()
 
     def handle(self, action, now, options):
         if action == "next":
@@ -214,12 +251,12 @@ class Slides(Effect):
         elif action == "first":
             self._go(0, now)
         elif action == "last":
-            self._go(len(self.pages) - 1, now)
+            self._go(self.count - 1, now)
         elif action == "go":
             self._go(int(options.get("n", 1)) - 1, now)
         elif action in ("landscape", "portrait", "auto"):
             self.opts["orientation"] = action
-            self._reload()
+            self._remake()
         elif action == "deck":
             self.decks = list_decks(self.folder)
             name = options.get("name")
@@ -229,7 +266,8 @@ class Slides(Effect):
                 pos = self.decks.index(self.deck) if self.deck in self.decks else -1
                 self.deck = self.decks[(pos + 1) % len(self.decks)]
             self.shown = self.previous = None
-            self._reload(load_deck=True)
+            self.index = 0
+            self._remake()
         elif action == "configure":           # from the control window
             rebuild = False
             for key in ("frame", "blur", "tint"):
@@ -242,16 +280,16 @@ class Slides(Effect):
                     and options["orientation"] != self.opts["orientation"]:
                 self.opts["orientation"], rebuild = options["orientation"], True
             if rebuild:
-                self._reload()
+                self._remake()
         elif action in ("frame", "blur", "tint"):      # flip one option
             self.handle("configure", now, {action: str(not self.opts[action])})
 
     def info(self) -> str:
         if self.message:
             return self.message
-        if not self.pages:
+        if not self.count:
             return "Loading slides..." if self.loading else "No slides"
-        return f"Slide {self.index + 1} / {len(self.pages)}   ({self.deck.name})"
+        return f"Slide {self.index + 1} / {self.count}   ({self.deck.name})"
 
     # ---- each frame -----------------------------------------------------------
     def _apply_shade(self, frame, card_left, level):
@@ -336,7 +374,28 @@ class Slides(Effect):
             self.previous = None
             if card is not None:
                 self._draw(frame, card, offset, opacity)
+            else:
+                self._draw_note(frame, card_left, card_w, offset, opacity)
         return frame
+
+    def _draw_note(self, frame, card_left, card_w, offset, opacity):
+        """No slide ready yet: show why, in a small card where the slide will be."""
+        text = self.message or ("Opening slides..." if self.loading else "No slides")
+        if text not in self._notes:
+            fnt = font(int(self.H * 0.03), "medium")
+            lines = wrap_text(text, fnt, int(card_w * 0.8))
+            line_h = int(fnt.size * 1.35)
+            w, h = card_w, line_h * len(lines) + int(self.H * 0.08)
+            img, (ox, oy) = soft_card(w, h, (*self.colours["primary"], 235), radius=int(self.H * 0.028))
+            d = ImageDraw.Draw(img)
+            for n, line in enumerate(lines):
+                d.text((ox + w / 2, oy + h / 2 + (n - (len(lines) - 1) / 2) * line_h), line, font=fnt,
+                       fill=(*self.colours["text"], 255), anchor="mm")
+            self._notes = {text: to_array(img)}
+        sprite = self._notes[text]
+        sh, sw = sprite.shape[:2]
+        x = card_left - (sw - card_w) / 2 + offset
+        blend(frame, sprite, x, (self.H - sh) / 2, opacity)
 
     def _draw(self, frame, card, offset, opacity):
         sprite, m, w, h, solid = card
