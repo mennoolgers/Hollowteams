@@ -94,3 +94,42 @@ If an effect has a mistake, the app still starts; the status line tells you whic
 
 ### Fonts
 The app uses **Inter** (free, SIL Open Font License; see `fonts/Inter-LICENSE.txt`).
+
+## Step 3: the Stream Deck
+
+Every button uses the Stream Deck's **built-in "Website" action** with **"GET request in
+background"** ticked. It calls the app's web address silently, no browser opens and no plugin
+is needed. (BarRaider's API Ninja plugin is Windows-only, so it does not apply to a Mac.)
+
+### Set up one button
+1. Open the **Stream Deck** app on your Mac.
+2. In the action list on the right, type **Website** in the search box (it sits under **System**).
+3. Drag **Website** onto an empty key.
+4. In the settings below the keys:
+   * **URL:** paste the address from the table below, e.g. `http://127.0.0.1:8765/effect/confetti`
+   * Tick **GET request in background**.
+   * **Title:** leave it empty (the icon already has a label).
+5. Click the **icon square** next to Title → **Set from File** → choose the matching PNG from the
+   **`stream-deck-icons`** folder.
+6. Repeat for each effect.
+
+| Key | URL | Icon |
+|---|---|---|
+| Key word | `http://127.0.0.1:8765/effect/keyword` | `keyword.png` |
+| Confetti | `http://127.0.0.1:8765/effect/confetti` | `confetti.png` |
+| Countdown 5 min | `http://127.0.0.1:8765/effect/countdown` | `countdown.png` |
+| Logo | `http://127.0.0.1:8765/effect/logo` | `logo.png` |
+| Warm glow | `http://127.0.0.1:8765/effect/glow` | `glow.png` |
+| Back in a moment | `http://127.0.0.1:8765/effect/brb` | `brb.png` |
+| Clear all | `http://127.0.0.1:8765/clear` | `clear.png` |
+
+Extra ideas: a "10 min" countdown key with `http://127.0.0.1:8765/effect/countdown?minutes=10`,
+or a key that always shows one phrase: `http://127.0.0.1:8765/effect/keyword?text=Well%20done`.
+
+Tip: put all keys in their own Stream Deck **profile** or **folder** called "Presenter Cam".
+
+### If a key does nothing
+1. Is the Presenter Cam app open? The addresses only work while it runs.
+2. Paste the address into Safari. If the effect appears, the app is fine and the key's URL or
+   checkbox needs another look.
+3. The icons can be re-made in your colours: `.venv/bin/python tools/make_icons.py`
