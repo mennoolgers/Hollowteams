@@ -12,6 +12,8 @@ DEFAULTS = {
     "output": {"width": 1280, "height": 720, "fps": 30},
     "camera": {"width": 1920, "height": 1080, "fps": 30},
     "colours": {"primary": "#0A3A66", "deep": "#061E36", "accent": "#6FA8DC", "text": "#FFFFFF"},
+    "server": {"port": 8765},
+    "effects": {},
 }
 
 

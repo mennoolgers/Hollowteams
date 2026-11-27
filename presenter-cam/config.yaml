@@ -26,3 +26,49 @@ colours:
   deep:    "#061E36"   # Darker marine, for shadows and backgrounds
   accent:  "#6FA8DC"   # Light sea blue, for highlights
   text:    "#FFFFFF"   # Text on top of the colours
+
+# The local web address your Stream Deck calls, e.g. http://127.0.0.1:8765/effect/confetti
+# Only this Mac can reach it.
+server:
+  port: 8765
+
+# ---------------------------------------------------------------------------
+# Effects. Each block belongs to one file in the effects/ folder.
+# Times are in seconds. Positions: top-left, top-right, bottom-left, bottom-right.
+# ---------------------------------------------------------------------------
+effects:
+
+  keyword:                 # Key word pop: each press shows the next word in this list
+    words:
+      - "Curiosity"
+      - "Listen first"
+      - "Small steps"
+      - "What did you notice?"
+      - "Try it out"
+    seconds: 5             # how long each word stays
+    position: right        # right or left of you
+
+  confetti:
+    amount: 160            # pieces per press
+    colours: ["#0A3A66", "#6FA8DC", "#FFFFFF", "#E9C46A", "#E07A5F", "#A8DADC"]
+
+  countdown:
+    minutes: 5             # default length; the URL ?minutes=10 overrides it
+    corner: top-right
+    end_text: "Time's up"
+    end_seconds: 8         # how long "Time's up" stays
+
+  logo:
+    file: assets/logo.png  # put your own PNG (with transparent background) here
+    height: 72             # in pixels on a 1280x720 picture
+    corner: top-left
+    opacity: 0.92
+
+  glow:
+    colour: "#FFB870"      # warm light; try "#6FA8DC" for a cool sea-blue wash
+    strength: 0.32         # 0.1 = very subtle, 0.5 = strong
+
+  brb:                     # "Back in a moment" screen
+    title: "Back in a moment"
+    subtitle: "We'll continue shortly"
+    tint: 0.55             # how much Marine Blue covers the blurred camera (0 to 1)

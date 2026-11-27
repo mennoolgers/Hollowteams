@@ -1,7 +1,7 @@
 """Presenter Cam: the small control window.
 
-Shows a live preview, lets you choose your camera, and has one big
-Start / Stop button for sending the picture to OBS Virtual Camera.
+Shows a live preview, lets you choose your camera, has one big Start / Stop
+button for sending the picture to OBS Virtual Camera, and a button per effect.
 """
 import os
 import tkinter as tk
@@ -15,7 +15,8 @@ os.environ.setdefault("OPENCV_AVFOUNDATION_SKIP_AUTH", "1")
 
 import cameras  # noqa: E402
 from engine import Engine  # noqa: E402
-from settings import load_config, load_state, save_state
+from settings import load_config, load_state, save_state  # noqa: E402
+from web import start_server  # noqa: E402
 
 PREVIEW_W, PREVIEW_H = 512, 288
 PREVIEW_EVERY_MS = 66   # the preview refreshes ~15 times a second; the output stays at 30
@@ -24,13 +25,14 @@ PREVIEW_EVERY_MS = 66   # the preview refreshes ~15 times a second; the output s
 class FlatButton(tk.Label):
     """A coloured button. (Normal Mac buttons ignore custom colours.)"""
 
-    def __init__(self, master, text, command, bg, fg, **kw):
+    def __init__(self, master, text, command, bg, fg, size=15, **kw):
         super().__init__(master, text=text, bg=bg, fg=fg, cursor="hand2",
-                         padx=18, pady=10, font=("Helvetica", 15, "bold"), **kw)
+                         padx=18, pady=10, font=("Helvetica", size, "bold"), **kw)
         self.bind("<Button-1>", lambda _e: command())
 
-    def restyle(self, text, bg):
-        self.configure(text=text, bg=bg)
+    def restyle(self, text, bg, fg=None):
+        if (self.cget("text"), self.cget("bg"), fg or self.cget("fg")) != (text, bg, fg or self.cget("fg")):
+            self.configure(text=text, bg=bg, fg=fg or self.cget("fg"))
 
 
 class App:
@@ -70,10 +72,34 @@ class App:
                                justify="left", wraplength=PREVIEW_W, font=("Helvetica", 12))
         self.status.pack(fill="x", padx=12, pady=(0, 6))
 
-        tk.Label(self.root, text="Effects: coming in the next step", bg=c["deep"], fg=c["accent"],
-                 anchor="w", font=("Helvetica", 12, "italic")).pack(fill="x", padx=12, pady=(0, 12))
-
         self.engine = Engine(self.config)
+        for err in self.engine.effects.load_errors:
+            print(err)
+        manager = self.engine.effects
+
+        tk.Label(self.root, text="Effects", bg=c["deep"], fg=c["accent"], anchor="w",
+                 font=("Helvetica", 13, "bold")).pack(fill="x", padx=12, pady=(4, 4))
+        grid = tk.Frame(self.root, bg=c["deep"])
+        grid.pack(fill="x", padx=12)
+        self.effect_buttons = {}
+        names = manager.button_order()
+        for i, name in enumerate(names + ["clear"]):
+            if name == "clear":
+                button = FlatButton(grid, "Clear all", lambda: manager.command("clear"),
+                                    bg="#E07A5F", fg=c["text"], size=13)
+            else:
+                button = FlatButton(grid, manager.effects[name].title,
+                                    lambda n=name: manager.command(n), bg=c["primary"], fg=c["text"], size=13)
+                self.effect_buttons[name] = button
+            button.grid(row=i // 3, column=i % 3, sticky="ew", padx=3, pady=3)
+        for col in range(3):
+            grid.columnconfigure(col, weight=1, uniform="fx")
+
+        port = self.config["server"]["port"]
+        self.server, self.server_error = start_server(manager, port, self.config["colours"])
+        tk.Label(self.root, text=f"Stream Deck / browser:  http://127.0.0.1:{port}/",
+                 bg=c["deep"], fg=c["accent"], anchor="w",
+                 font=("Helvetica", 12)).pack(fill="x", padx=12, pady=(8, 12))
         self.camera_list = []
         self.waiting_for_permission = False
         self.permission = cameras.camera_permission()
@@ -137,7 +163,9 @@ class App:
             self.start_button.restyle("Start camera output", self.c["accent"])
             line = "Not sending. Press Start, then pick OBS Virtual Camera in Zoom."
         line += f"   {e.actual_fps:4.1f} fps, {e.frame_ms:4.1f} ms per frame"
-        problems = [p for p in (e.output_error, getattr(e.source, "error", None)) if p]
+        problems = [p for p in (e.output_error, getattr(e.source, "error", None), self.server_error) if p]
+        problems += [err.splitlines()[0] + " (details in the Terminal window)"
+                     for err in e.effects.load_errors]
         if self.waiting_for_permission and self.permission == "ask":
             problems.append("Waiting for camera permission: click Allow in the macOS question.")
         elif self.waiting_for_permission:
@@ -146,9 +174,17 @@ class App:
         if problems:
             line += "\n" + "\n".join(problems)
         self.status.configure(text=line)
+        for item in e.effects.status():
+            button = self.effect_buttons.get(item["name"])
+            if button is not None:
+                on = item["on"]
+                button.restyle(item["title"], self.c["accent"] if on else self.c["primary"],
+                               self.c["deep"] if on else self.c["text"])
         self.root.after(PREVIEW_EVERY_MS, self.tick)
 
     def quit(self):
+        if self.server is not None:
+            self.server.shutdown()
         self.engine.shutdown()
         self.root.destroy()
 

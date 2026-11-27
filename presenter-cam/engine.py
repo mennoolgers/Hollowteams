@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from effects_manager import EffectsManager
 from settings import hex_to_rgb
 
 
@@ -73,6 +74,9 @@ class Engine:
         self.frame_ms = 0.0           # average time to build one frame
         self.actual_fps = 0.0
         self._cards = {}
+        self.effects = EffectsManager(
+            {"width": self.width, "height": self.height, "fps": self.fps, "colours": self.colours},
+            config.get("effects", {}))
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
@@ -98,13 +102,18 @@ class Engine:
     def _build_frame(self, now: float) -> np.ndarray:
         src = self.source
         raw = src.latest() if src is not None else None
+        self.effects.apply_commands(now)
         if raw is None:
             if src is not None and getattr(src, "error", None):
-                return self._card("Camera problem: see the control window")
-            return self._card("Waiting for camera..." if src else "No camera yet")
-        frame = fit_cover(raw, self.width, self.height)
-        # Effects are added here in the next step.
-        return frame
+                frame = self._card("Camera problem: see the control window")
+            else:
+                frame = self._card("Waiting for camera..." if src else "No camera yet")
+            if not self.effects.any_active(now):
+                return frame
+            frame = frame.copy()      # never paint on the stored card itself
+        else:
+            frame = fit_cover(raw, self.width, self.height)
+        return self.effects.render(frame, now)
 
     def _loop(self):
         cam = None
