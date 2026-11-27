@@ -8,7 +8,8 @@ out through **OBS Virtual Camera** into Zoom, Teams and Meet. I never open OBS i
 ## Step 0: test the camera route
 
 ### One-time preparation
-1. **Python 3.11 or newer** from <https://www.python.org/downloads/> (this is the only
+1. **Python 3.14** from <https://www.python.org/downloads/macos/> (3.11 to 3.14 work; 3.15 is
+   not supported yet by the virtual camera library). This is the only
    thing installed system-wide, and you do it yourself).
 2. **OBS Studio 30 or newer** from <https://obsproject.com>.
 3. Wake up the OBS virtual camera driver once:
