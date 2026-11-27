@@ -46,7 +46,7 @@ class EffectsManager:
                  "on": bool(self.effects[n].is_on())} for n in self.button_order()]
 
     def button_order(self) -> list:
-        preferred = ["keyword", "confetti", "countdown", "logo", "glow", "brb"]
+        preferred = ["slides", "keyword", "confetti", "countdown", "logo", "glow", "brb"]
         return [n for n in preferred if n in self.effects] + \
                sorted(n for n in self.effects if n not in preferred)
 
@@ -64,8 +64,10 @@ class EffectsManager:
                         effect.clear(now)
                     elif action == "on":
                         effect.set(True, now, options)
-                    else:
+                    elif action == "press":
                         effect.press(now, options)
+                    elif hasattr(effect, "handle"):      # extra actions, e.g. slides/next
+                        effect.handle(action, now, options)
                 except Exception:  # noqa: BLE001
                     traceback.print_exc()
 

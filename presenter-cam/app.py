@@ -95,6 +95,10 @@ class App:
         for col in range(3):
             grid.columnconfigure(col, weight=1, uniform="fx")
 
+        self.slides = manager.effects.get("slides")
+        if self.slides is not None:
+            self._build_slide_controls(manager)
+
         port = self.config["server"]["port"]
         self.server, self.server_error = start_server(manager, port, self.config["colours"])
         tk.Label(self.root, text=f"Stream Deck / browser:  http://127.0.0.1:{port}/",
@@ -108,6 +112,71 @@ class App:
         self.refresh_cameras(select=self.state.get("camera_name"))
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
         self.root.after(PREVIEW_EVERY_MS, self.tick)
+
+    # ---- slides -----------------------------------------------------------
+    def _build_slide_controls(self, manager):
+        c, sl = self.c, self.slides
+        saved = self.state.get("slides", {})
+        box = tk.Frame(self.root, bg=c["deep"])
+        box.pack(fill="x", padx=12, pady=(10, 0))
+        tk.Label(box, text="Slides", bg=c["deep"], fg=c["accent"],
+                 font=("Helvetica", 13, "bold")).grid(row=0, column=0, sticky="w")
+        self.deck_box = ttk.Combobox(box, state="readonly", width=26,
+                                     values=[d.name for d in sl.decks] or ["(no decks in slides folder)"])
+        self.deck_box.grid(row=0, column=1, columnspan=2, sticky="w", padx=6)
+        if sl.deck is not None:
+            self.deck_box.set(saved.get("deck") if saved.get("deck") in [d.name for d in sl.decks] else sl.deck.name)
+            if self.deck_box.get() != sl.deck.name:
+                manager.command("slides", "deck", {"name": self.deck_box.get()})
+        else:
+            self.deck_box.current(0)
+        self.deck_box.bind("<<ComboboxSelected>>", lambda _e: self._slide_option(
+            "deck", self.deck_box.get(), action="deck", options={"name": self.deck_box.get()}))
+        nav = tk.Frame(box, bg=c["deep"])
+        nav.grid(row=0, column=3, sticky="e")
+        FlatButton(nav, "\u2039 Back", lambda: manager.command("slides", "prev"), bg=c["primary"],
+                   fg=c["text"], size=13).pack(side="left")
+        self.slide_label = tk.Label(nav, text="", width=11, bg=c["deep"], fg=c["text"],
+                                    font=("Helvetica", 12))
+        self.slide_label.pack(side="left", padx=4)
+        FlatButton(nav, "Next \u203A", lambda: manager.command("slides", "next"), bg=c["primary"],
+                   fg=c["text"], size=13).pack(side="left")
+        box.columnconfigure(3, weight=1)
+
+        opts = tk.Frame(self.root, bg=c["deep"])
+        opts.pack(fill="x", padx=12, pady=(6, 0))
+        shapes = {"Auto shape": "auto", "Landscape": "landscape", "Portrait": "portrait"}
+        anims = {"Slide in": "slide", "Fade": "fade"}
+        self.shape_box = ttk.Combobox(opts, state="readonly", width=11, values=list(shapes))
+        self.anim_box = ttk.Combobox(opts, state="readonly", width=8, values=list(anims))
+        shape = saved.get("orientation", sl.opts["orientation"])
+        anim = saved.get("animation", sl.opts["animation"])
+        self.shape_box.set(next((k for k, v in shapes.items() if v == shape), "Auto shape"))
+        self.anim_box.set(next((k for k, v in anims.items() if v == anim), "Slide in"))
+        self.shape_box.bind("<<ComboboxSelected>>", lambda _e: self._slide_option(
+            "orientation", shapes[self.shape_box.get()]))
+        self.anim_box.bind("<<ComboboxSelected>>", lambda _e: self._slide_option(
+            "animation", anims[self.anim_box.get()]))
+        self.shape_box.pack(side="left")
+        self.anim_box.pack(side="left", padx=6)
+        self.slide_flags = {}
+        for key, text in (("blur", "Blur camera"), ("tint", "Tint camera"), ("frame", "Frame")):
+            var = tk.BooleanVar(value=saved.get(key, sl.opts[key]))
+            tk.Checkbutton(opts, text=text, variable=var, bg=c["deep"], fg=c["text"],
+                           activebackground=c["deep"], activeforeground=c["text"],
+                           selectcolor=c["primary"], highlightthickness=0,
+                           command=lambda k=key, v=var: self._slide_option(k, str(v.get()))
+                           ).pack(side="left", padx=4)
+            self.slide_flags[key] = var
+        # Apply remembered choices.
+        manager.command("slides", "configure", {
+            "orientation": shape, "animation": anim,
+            **{k: str(v.get()) for k, v in self.slide_flags.items()}})
+
+    def _slide_option(self, key, value, action="configure", options=None):
+        self.state.setdefault("slides", {})[key] = value
+        save_state(self.state)
+        self.engine.effects.command("slides", action, options or {key: value})
 
     # ---- camera choice ----------------------------------------------------
     def refresh_cameras(self, select=None):
@@ -171,9 +240,14 @@ class App:
         elif self.waiting_for_permission:
             problems.append("Camera access is off. System Settings > Privacy & Security > Camera: "
                             "switch on Terminal, then close and restart this app.")
+        if self.slides is not None and not self.slides.info().startswith("Slide"):
+            problems.append(self.slides.info())
         if problems:
             line += "\n" + "\n".join(problems)
         self.status.configure(text=line)
+        if self.slides is not None:
+            info = self.slides.info()
+            self.slide_label.configure(text=info.split("   ")[0][6:] if info.startswith("Slide") else "")
         for item in e.effects.status():
             button = self.effect_buttons.get(item["name"])
             if button is not None:

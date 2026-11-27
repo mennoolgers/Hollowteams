@@ -133,3 +133,38 @@ Tip: put all keys in their own Stream Deck **profile** or **folder** called "Pre
 2. Paste the address into Safari. If the effect appears, the app is fine and the key's URL or
    checkbox needs another look.
 3. The icons can be re-made in your colours: `.venv/bin/python tools/make_icons.py`
+
+## Step 4: slides beside you
+
+Show your slide deck on the right, with you on the left (the camera moves over a little and the
+area behind the slide darkens so the slide stands out).
+
+### Getting your deck in
+1. **PowerPoint:** File → Export → File Format **PDF** → Export.
+   (Keynote: File → Export To → PDF. Google Slides: File → Download → PDF.)
+2. Put the PDF in the **`slides`** folder inside presenter-cam. Several decks are fine.
+   A folder of images (Slide1.png, Slide2.png ...) also works.
+3. Restart the app. Choose your deck in the **Slides** list in the window.
+
+### In the window
+* **Slides** button: show / hide.  **‹ Back** / **Next ›**: previous / next slide.
+* **Auto shape / Landscape / Portrait:** Auto follows each slide's own shape. Landscape or
+  Portrait force that shape; a slide of the other shape is cropped to fit.
+* **Slide in / Fade:** how the slide appears.
+* **Blur camera**, **Tint camera** (Marine Blue), **Frame** (thin white border).
+The app remembers these choices. Fine-tuning (darkness, how far you move, slide size) is in
+`config.yaml` under `slides:`.
+
+### Stream Deck keys (Website action, "GET request in background" ticked)
+| Key | URL | Icon |
+|---|---|---|
+| Slides on/off | `http://127.0.0.1:8765/effect/slides` | `slides.png` |
+| Next slide | `http://127.0.0.1:8765/effect/slides/next` | `slide-next.png` |
+| Previous slide | `http://127.0.0.1:8765/effect/slides/prev` | `slide-prev.png` |
+| Back to slide 1 | `http://127.0.0.1:8765/effect/slides/first` | |
+| Jump to slide 5 | `http://127.0.0.1:8765/effect/slides/go?n=5` | |
+| Landscape / Portrait / Auto | `http://127.0.0.1:8765/effect/slides/landscape` (or `/portrait`, `/auto`) | |
+| Next deck in the folder | `http://127.0.0.1:8765/effect/slides/deck` | |
+
+Note: the slides are pictures of your deck, so animations and videos inside PowerPoint do not play.
+After changing the deck, export the PDF again and choose it in the list (or restart the app).

@@ -72,3 +72,15 @@ effects:
     title: "Back in a moment"
     subtitle: "We'll continue shortly"
     tint: 0.55             # how much Marine Blue covers the blurred camera (0 to 1)
+
+  slides:                  # Slides beside you
+    folder: slides         # put PDF exports (or folders of slide images) here
+    deck: ""               # file name to start with; empty = the first one in the folder
+    orientation: auto      # auto (follows each slide), landscape or portrait (crops to fit)
+    animation: slide       # slide (glides in from the right) or fade
+    frame: true            # thin white frame around the slide
+    blur_camera: false     # soften the camera picture while slides show
+    tint_camera: false     # give the camera picture a Marine Blue tint
+    shade: 0.8             # how dark the area behind the slide gets (0 = not at all)
+    camera_shift: 0.7      # move you left to make room (0 = stay put, 1 = all the way)
+    size: 0.6              # landscape slide width, as part of the picture width

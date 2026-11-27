@@ -174,12 +174,35 @@ def blend(frame: np.ndarray, sprite: np.ndarray, x: int, y: int, opacity: float 
     if x0 >= x1 or y0 >= y1:
         return
     part = sprite[y0 - y:y1 - y, x0 - x:x1 - x]
-    alpha = part[..., 3:4].astype(np.uint16)
+    alpha = np.ascontiguousarray(part[..., 3])
     if opacity < 0.998:
-        alpha = (alpha * int(opacity * 256)) >> 8
+        alpha = cv2.convertScaleAbs(alpha, alpha=opacity)
+    alpha3 = cv2.merge((alpha, alpha, alpha))
     roi = frame[y0:y1, x0:x1]
-    roi[:] = ((part[..., :3].astype(np.uint16) * alpha
-               + roi.astype(np.uint16) * (255 - alpha) + 127) // 255).astype(np.uint8)
+    # OpenCV's image maths is many times faster than plain numpy for this.
+    painted = cv2.multiply(np.ascontiguousarray(part[..., :3]), alpha3, scale=1 / 255)
+    kept = cv2.multiply(np.ascontiguousarray(roi), cv2.bitwise_not(alpha3), scale=1 / 255)
+    roi[:] = cv2.add(painted, kept)
+
+
+def blend_card(frame: np.ndarray, sprite: np.ndarray, x: int, y: int, solid: tuple) -> None:
+    """Like blend() at full opacity, but copies the sprite's solid middle straight across.
+
+    solid = (x0, y0, x1, y1) inside the sprite where every pixel is fully opaque.
+    Much faster for big cards such as slides.
+    """
+    fh, fw = frame.shape[:2]
+    sh, sw = sprite.shape[:2]
+    x, y = int(round(x)), int(round(y))
+    sx0, sy0, sx1, sy1 = solid
+    if x + sx0 < 0 or y + sy0 < 0 or x + sx1 > fw or y + sy1 > fh:
+        blend(frame, sprite, x, y)          # partly off-screen: use the careful way
+        return
+    frame[y + sy0:y + sy1, x + sx0:x + sx1] = sprite[sy0:sy1, sx0:sx1, :3]
+    blend(frame, sprite[:sy0], x, y)                                  # top band
+    blend(frame, sprite[sy1:], x, y + sy1)                            # bottom band
+    blend(frame, sprite[sy0:sy1, :sx0], x, y + sy0)                   # left band
+    blend(frame, sprite[sy0:sy1, sx1:], x + sx1, y + sy0)             # right band
 
 
 def scale_sprite(sprite: np.ndarray, factor: float) -> np.ndarray:

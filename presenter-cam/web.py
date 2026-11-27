@@ -2,6 +2,7 @@
 
   /effect/<name>          press the effect (toggle or trigger)
   /effect/<name>/on       switch on      /effect/<name>/off   switch off
+  /effect/<name>/<extra>  extra actions, e.g. /effect/slides/next
   /clear                  remove every effect
   /status                 which effects are on (JSON)
   /                       a simple page with buttons, handy for testing
@@ -56,9 +57,9 @@ def start_server(manager, port: int, colours: dict):
                 manager.command("clear")
                 return self._reply(200, json.dumps({"ok": True, "done": "clear"}))
             if parts[0] == "effect" and len(parts) in (2, 3):
-                action = parts[2] if len(parts) == 3 else "press"
-                if action not in ("press", "on", "off", "toggle"):
-                    return self._reply(400, json.dumps({"ok": False, "error": "use on, off or nothing"}))
+                action = parts[2].lower() if len(parts) == 3 else "press"
+                if not action.isalpha():
+                    return self._reply(400, json.dumps({"ok": False, "error": "unknown action"}))
                 if manager.command(parts[1], "press" if action == "toggle" else action, options):
                     return self._reply(200, json.dumps({"ok": True, "effect": parts[1], "action": action}))
                 return self._reply(404, json.dumps({"ok": False, "error": f"no effect '{parts[1]}'",

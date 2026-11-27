@@ -116,6 +116,25 @@ def main():
         d.ellipse(((x - 4.5) * k, (y - 4.5) * k, (x + 4.5) * k, (y + 4.5) * k), fill=white)
     label(img, "Clear all", white); finish(img, "clear")
 
+    # Slides: a slide card beside a small person
+    img = base(c); d = ImageDraw.Draw(img)
+    d.ellipse((22 * k, 40 * k, 40 * k, 58 * k), fill=white)
+    d.rounded_rectangle((16 * k, 62 * k, 46 * k, 92 * k), 10 * k, fill=white)
+    d.rounded_rectangle((54 * k, 30 * k, 126 * k, 82 * k), 6 * k, fill=white)
+    d.rectangle((54 * k + 5 * k, 30 * k + 5 * k, 76 * k, 82 * k - 5 * k), fill=accent)
+    d.rounded_rectangle((82 * k, 46 * k, 118 * k, 51 * k), 2 * k, fill=rgb(c["primary"]))
+    d.rounded_rectangle((82 * k, 57 * k, 108 * k, 61 * k), 2 * k, fill=accent)
+    label(img, "Slides", white); finish(img, "slides")
+
+    # Next / previous slide: a big chevron
+    for name, text, pts in (("slide-next", "Next slide", ((58, 30), (86, 58), (58, 86))),
+                            ("slide-prev", "Prev slide", ((86, 30), (58, 58), (86, 86)))):
+        img = base(c); d = ImageDraw.Draw(img)
+        d.line([(x * k, y * k) for x, y in pts], fill=white, width=11 * k, joint="curve")
+        for x, y in (pts[0], pts[2]):
+            d.ellipse(((x - 5.5) * k, (y - 5.5) * k, (x + 5.5) * k, (y + 5.5) * k), fill=white)
+        label(img, text, white); finish(img, name)
+
     print(f"Icons saved in {OUT}")
 
 
