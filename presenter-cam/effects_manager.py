@@ -46,7 +46,7 @@ class EffectsManager:
                  "on": bool(self.effects[n].is_on())} for n in self.button_order()]
 
     def button_order(self) -> list:
-        preferred = ["slides", "keyword", "confetti", "countdown", "logo", "glow", "brb"]
+        preferred = ["slides", "poll", "keyword", "confetti", "countdown", "logo", "glow", "brb"]
         return [n for n in preferred if n in self.effects] + \
                sorted(n for n in self.effects if n not in preferred)
 

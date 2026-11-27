@@ -4,3 +4,4 @@ __pycache__/
 .state.json
 slides/*
 !slides/README.txt
+zoom_chat_probe.txt

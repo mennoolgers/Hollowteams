@@ -135,6 +135,20 @@ def main():
             d.ellipse(((x - 5.5) * k, (y - 5.5) * k, (x + 5.5) * k, (y + 5.5) * k), fill=white)
         label(img, text, white); finish(img, name)
 
+    # Poll: green and red result bars
+    for name, text in (("poll", "Poll"), ("poll-next", "Next poll")):
+        img = base(c); d = ImageDraw.Draw(img)
+        d.rounded_rectangle((30 * k, 26 * k, 70 * k, 54 * k), 7 * k, fill=(62, 158, 100))
+        d.rounded_rectangle((74 * k, 26 * k, 114 * k, 54 * k), 7 * k, fill=(214, 76, 69))
+        d.text((50 * k, 40 * k), "JA", font=font(13, "Bold"), fill=white, anchor="mm")
+        d.text((94 * k, 40 * k), "NEE", font=font(13, "Bold"), fill=white, anchor="mm")
+        d.rounded_rectangle((30 * k, 68 * k, 114 * k, 73 * k), 2 * k, fill=(214, 76, 69))
+        d.rounded_rectangle((30 * k, 68 * k, 82 * k, 73 * k), 2 * k, fill=(62, 158, 100))
+        d.ellipse((76 * k, 64 * k, 88 * k, 76 * k), fill=white)
+        if name == "poll-next":
+            d.line((100 * k, 84 * k, 110 * k, 92 * k, 100 * k, 100 * k), fill=white, width=4 * k, joint="curve")
+        label(img, text, white); finish(img, name)
+
     print(f"Icons saved in {OUT}")
 
 

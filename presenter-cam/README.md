@@ -168,3 +168,35 @@ The app remembers these choices. Fine-tuning (darkness, how far you move, slide 
 
 Note: the slides are pictures of your deck, so animations and videos inside PowerPoint do not play.
 After changing the deck, export the PDF again and choose it in the list (or restart the app).
+
+## Step 5: Yes / No poll
+
+A poll card at the bottom of the picture: the question in the middle, **Yes** on the left and
+**No** on the right with live counts, the names of the latest voters, and a balance bar.
+Each person counts once; if they change their answer, they move to the other side.
+
+### Running a poll
+* **Poll** button (or Stream Deck): starts the next question from `config.yaml`; press again to hide.
+* People answer in the chat. The first word counts: *yes, ja, y, j, 👍* or *no, nee, n, 👎*
+  (change the words under `poll:` in `config.yaml`).
+
+| Key | URL | Icon |
+|---|---|---|
+| Poll on/off | `http://127.0.0.1:8765/effect/poll` | `poll.png` |
+| Next question (votes cleared) | `http://127.0.0.1:8765/effect/poll/next` | `poll-next.png` |
+| Clear the votes | `http://127.0.0.1:8765/effect/poll/reset` | |
+| Your own question | `http://127.0.0.1:8765/effect/poll?text=Did%20you%20enjoy%20this%3F` | |
+| Add a vote by hand | `http://127.0.0.1:8765/effect/poll/vote?name=Ana&answer=yes` | |
+
+(`%20` is a space, `%3F` is a question mark.)
+
+### Reading the Zoom chat (in progress)
+The app will read new messages from Zoom's chat panel on your Mac (like a screen reader does).
+To build this, we first look at how Zoom's chat panel is put together:
+1. Run **`setup_mac.command`** once (adds a small helper).
+2. Start a **test** Zoom meeting, open the **Chat** panel, and type a few messages
+   ("yes", "nee", "hello"), from a second device if you can.
+3. Double-click **`run_zoom_probe.command`**. The first time, macOS asks to allow
+   **Terminal** under Privacy & Security → **Accessibility**: switch it on and run it again.
+4. It writes **`zoom_chat_probe.txt`** in this folder. Have a look, then send it to your developer.
+   It contains the texts visible in your Zoom window (names, chat messages), so use a test meeting.

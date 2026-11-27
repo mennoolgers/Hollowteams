@@ -84,3 +84,16 @@ effects:
     shade: 0.8             # how dark the area behind the slide gets (0 = not at all)
     camera_shift: 0.7      # move you left to make room (0 = stay put, 1 = all the way)
     size: 0.6              # landscape slide width, as part of the picture width
+
+  poll:                    # Yes / No poll, answered in the chat
+    questions:             # each new poll shows the next question
+      - "Is this your first time here?"
+      - "Did you try this before?"
+      - "Ready for the next step?"
+    prompt: "Type yes or no in the chat"   # e.g. "Typ ja of nee in de chat"
+    yes_label: "Yes"       # e.g. "Ja"
+    no_label: "No"         # e.g. "Nee"
+    yes_words: ["yes", "ja", "y", "j", "yep", "👍"]   # first word of a chat message
+    no_words: ["no", "nee", "n", "nope", "👎"]
+    yes_colour: "#3E9E64"
+    no_colour: "#D64C45"

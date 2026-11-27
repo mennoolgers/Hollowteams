@@ -6,3 +6,4 @@ pyyaml>=6.0
 # Lets the app show your cameras by name on a Mac:
 pyobjc-framework-AVFoundation>=10.0; sys_platform == "darwin"
 pypdfium2>=4.30
+pyobjc-framework-ApplicationServices>=10.0; sys_platform == "darwin"
