@@ -23,10 +23,11 @@ def main() -> int:
         return 1
     try:
         from AppKit import NSWorkspace
-        from ApplicationServices import (AXIsProcessTrustedWithOptions, AXUIElementCopyAttributeValue,
-                                         AXUIElementCreateApplication, kAXTrustedCheckOptionPrompt)
-    except ImportError:
+        from HIServices import (AXIsProcessTrustedWithOptions, AXUIElementCopyAttributeValue,
+                                AXUIElementCreateApplication, kAXTrustedCheckOptionPrompt)
+    except ImportError as exc:
         print("A helper is missing. Close this window, double-click setup_mac.command, then try again.")
+        print(f"(Details for your developer: {exc})")
         return 1
 
     if not AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True}):
