@@ -97,3 +97,7 @@ effects:
     no_words: ["no", "nee", "n", "nope", "👎"]
     yes_colour: "#3E9E64"
     no_colour: "#D64C45"
+
+# Reading the chat for polls.
+chat:
+  zoom: true               # read Zoom's chat panel (Mac; needs Accessibility for Terminal)

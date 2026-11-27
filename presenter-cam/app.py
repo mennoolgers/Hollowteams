@@ -17,6 +17,7 @@ import cameras  # noqa: E402
 from engine import Engine  # noqa: E402
 from settings import load_config, load_state, save_state  # noqa: E402
 from web import start_server  # noqa: E402
+from chat_reader import ZoomChatReader  # noqa: E402
 
 PREVIEW_W, PREVIEW_H = 512, 288
 PREVIEW_EVERY_MS = 66   # the preview refreshes ~15 times a second; the output stays at 30
@@ -103,7 +104,17 @@ class App:
         self.server, self.server_error = start_server(manager, port, self.config["colours"])
         tk.Label(self.root, text=f"Stream Deck / browser:  http://127.0.0.1:{port}/",
                  bg=c["deep"], fg=c["accent"], anchor="w",
-                 font=("Helvetica", 12)).pack(fill="x", padx=12, pady=(8, 12))
+                 font=("Helvetica", 12)).pack(fill="x", padx=12, pady=(8, 2))
+
+        # Zoom chat -> poll answers.
+        self.chat = None
+        if self.config["chat"].get("zoom", True) and "poll" in manager.effects:
+            self.chat = ZoomChatReader(
+                lambda name, text: manager.command("poll", "chat", {"name": name, "text": text}))
+            self.chat.start()
+        self.chat_label = tk.Label(self.root, text="", bg=c["deep"], fg=c["accent"], anchor="w",
+                                   font=("Helvetica", 12))
+        self.chat_label.pack(fill="x", padx=12, pady=(0, 12))
         self.camera_list = []
         self.waiting_for_permission = False
         self.permission = cameras.camera_permission()
@@ -245,6 +256,8 @@ class App:
         if problems:
             line += "\n" + "\n".join(problems)
         self.status.configure(text=line)
+        if self.chat is not None:
+            self.chat_label.configure(text=f"Zoom chat:  {self.chat.status}")
         if self.slides is not None:
             info = self.slides.info()
             self.slide_label.configure(text=info.split("   ")[0][6:] if info.startswith("Slide") else "")
@@ -257,6 +270,8 @@ class App:
         self.root.after(PREVIEW_EVERY_MS, self.tick)
 
     def quit(self):
+        if self.chat is not None:
+            self.chat.stop()
         if self.server is not None:
             self.server.shutdown()
         self.engine.shutdown()

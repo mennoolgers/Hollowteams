@@ -190,13 +190,22 @@ Each person counts once; if they change their answer, they move to the other sid
 
 (`%20` is a space, `%3F` is a question mark.)
 
-### Reading the Zoom chat (in progress)
-The app will read new messages from Zoom's chat panel on your Mac (like a screen reader does).
-To build this, we first look at how Zoom's chat panel is put together:
-1. Run **`setup_mac.command`** once (adds a small helper).
-2. Start a **test** Zoom meeting, open the **Chat** panel, and type a few messages
-   ("yes", "nee", "hello"), from a second device if you can.
-3. Double-click **`run_zoom_probe.command`**. The first time, macOS asks to allow
-   **Terminal** under Privacy & Security → **Accessibility**: switch it on and run it again.
-4. It writes **`zoom_chat_probe.txt`** in this folder. Have a look, then send it to your developer.
-   It contains the texts visible in your Zoom window (names, chat messages), so use a test meeting.
+### Reading the Zoom chat
+The app reads new messages from Zoom's chat panel on your Mac (the way a screen reader does).
+Nothing leaves your Mac. The line **"Zoom chat:"** at the bottom of the window shows how it goes:
+
+| It says | What to do |
+|---|---|
+| reading the chat | All good. |
+| open the Chat panel in Zoom | Open Chat in the meeting (popped-out chat window also works). |
+| Zoom is not running | Start or join the meeting. |
+| allow Terminal under ... Accessibility | System Settings → Privacy & Security → Accessibility → switch on Terminal, restart the app. |
+
+Good to know:
+* Only messages sent **while the poll is showing** count. Older chat is ignored.
+* Keep the chat panel open during the poll. While you **share your screen**, Zoom moves the chat to
+  a floating window that may not be readable; test this once.
+* Your own messages count too (handy for testing).
+* Switch the reader off in `config.yaml`: `chat:` → `zoom: false`.
+* If Zoom changes its layout in an update, run **`run_zoom_probe.command`** again and send the
+  `zoom_chat_probe.txt` file to your developer.

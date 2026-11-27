@@ -14,6 +14,7 @@ DEFAULTS = {
     "colours": {"primary": "#0A3A66", "deep": "#061E36", "accent": "#6FA8DC", "text": "#FFFFFF"},
     "server": {"port": 8765},
     "effects": {},
+    "chat": {"zoom": True},
 }
 
 
