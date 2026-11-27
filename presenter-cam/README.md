@@ -3,7 +3,7 @@
 My own lightweight presenter camera: Mac (Apple silicon). Elgato webcam in, calm animated overlays on top,
 out through **OBS Virtual Camera** into Zoom, Teams and Meet. I never open OBS itself.
 
-> Status: **Step 0** (checking that the camera route works). The full app comes next.
+> Status: **Step 1**: control window with camera choice and live preview. Effects come next.
 
 ## Step 0: test the camera route
 
@@ -33,3 +33,23 @@ out through **OBS Virtual Camera** into Zoom, Teams and Meet. I never open OBS i
 4. Press Control+C (or close the Terminal window) to stop.
 
 If the ball glides smoothly, Step 0 passed.
+
+## Step 1: the control window
+
+1. Double-click **`setup_mac.command`** again (it adds a few new pieces). Do this whenever
+   I tell you the requirements changed.
+2. Double-click **`run_mac.command`**. The Presenter Cam window opens.
+3. The first time, macOS asks: *"Terminal" would like to access the camera*. Click **Allow**.
+   (The app runs inside Terminal, so Terminal is the name macOS shows.) If you missed it:
+   System Settings → Privacy & Security → Camera → switch on **Terminal**, then restart the app.
+4. Choose your camera in the **Camera** list. The app picks anything called "Elgato" by
+   itself and remembers your choice next time. "Test pattern" works without any camera.
+5. Press **Start camera output**, then pick **OBS Virtual Camera** in Zoom.
+6. Close the window to quit.
+
+The line under the button shows the frame rate (should be about 30 fps) and how long one frame
+takes to build (must stay well under 33 ms).
+
+### Changing settings
+Open **`config.yaml`** in TextEdit, change a value, save, restart the app. It holds the
+output size, the camera resolution and your colours (Marine Blue is the main one).

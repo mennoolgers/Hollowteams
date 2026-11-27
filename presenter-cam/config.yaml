@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# Presenter Cam settings
+#
+# Edit this file with TextEdit (or any text editor), save, and restart the app.
+# Tips:
+#   * Keep the spaces at the start of each line exactly as they are.
+#   * Text after a # is a comment and is ignored.
+#   * Colours are hex codes like "#0A3A66" (keep the quotes).
+# ---------------------------------------------------------------------------
+
+# What the app sends to Zoom / Teams / Meet.
+output:
+  width: 1280          # 1280 x 720 is light and sharp enough for video calls.
+  height: 720          # Use 1920 x 1080 if you want full HD (uses more power).
+  fps: 30
+
+# What the app asks your webcam for. Higher than the output gives a crisper picture.
+camera:
+  width: 1920
+  height: 1080
+  fps: 30
+
+# Your colours. Marine Blue is the main colour used across all effects.
+colours:
+  primary: "#0A3A66"   # Marine Blue
+  deep:    "#061E36"   # Darker marine, for shadows and backgrounds
+  accent:  "#6FA8DC"   # Light sea blue, for highlights
+  text:    "#FFFFFF"   # Text on top of the colours
